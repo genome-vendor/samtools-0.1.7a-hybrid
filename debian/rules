@@ -1,20 +1,25 @@
 #!/usr/bin/make -f
 
-include /usr/share/cdbs/1/rules/debhelper.mk
-include /usr/share/cdbs/1/class/makefile.mk
+VER=0.1.7a
+PKG_NAME=samtools-hybrid${VER}
+DEB_DIR=debian/${PKG_NAME}
 
-CFLAGS += -fPIC
+%:
+	dh $@
 
-DEB_MAKE_BUILD_TARGET = all all-recur razip lib
-DEB_MAKE_CHECK_TARGET = -C examples all
+build:
+	make all razip
 
-DEB_DH_BUILDDEB_ARGS = -- -Z=bzip2
+override_dh_auto_install:
+	mkdir -p ${DEB_DIR}/usr/lib/${PKG_NAME}/bin
+	mkdir -p ${DEB_DIR}/usr/bin
+	for filename in 'samtools-hybrid' 'razip'; do \
+		install -m755 $${filename} ${DEB_DIR}/usr/lib/${PKG_NAME}/bin/$${filename}; \
+		echo "export PATH=/usr/lib/${PKG_NAME}/bin/:\$$PATH; exec $$filename" >  ${DEB_DIR}/usr/bin/$${filename}${VER}; \
+		done
+	for filename in `find misc/ -executable -type f`; do \
+		file=`basename $${filename}`;   \
+		install -m 755 $${filename} ${DEB_DIR}/usr/lib/${PKG_NAME}/bin/$${file}; \
+		echo "export PATH=/usr/lib/${PKG_NAME}/bin/:\$$PATH; exec $$file" > ${DEB_DIR}/usr/bin/$${file}${VER}; \
+	done
 
-clean::
-	$(RM) examples/calDepth examples/ex1.bam examples/ex1.bam.bai examples/ex1.fa.fai examples/ex1.glf examples/ex1.glfview.gz examples/ex1.pileup.gz examples/ex1a.bam examples/ex1b.bam examples/ex1f-rmduppe.bam examples/ex1f-rmdupse.bam examples/ex1f.bam examples/ex1f.rg examples/ex1.bcf
-
-binary-install/samtools::
-	install -m 644 bcftools/README $(CURDIR)/debian/samtools/usr/share/doc/samtools/README.bcftools
-
-binary-fixup/samtools::
-	sed -i 's|^#!/software/bin/python|#!/usr/bin/python|' $(CURDIR)/debian/samtools/usr/share/samtools/varfilter.py
