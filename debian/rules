@@ -1,8 +1,15 @@
 #!/usr/bin/make -f
 
+PRG=samtools-hybrid
 VER=0.1.7a
-PKG_NAME=samtools-hybrid${VER}
-DEB_DIR=debian/${PKG_NAME}
+BIN_LIST=$$(find misc/ -executable -type f) samtools-hybrid razip
+PKG=$(PRG)$(VER)
+DEB_DIR=debian/$(PKG)
+PKG_LIB_DIR=/usr/lib/$(PKG)
+BIN_WRAPPER=\
+'\#!/bin/sh\n'\
+'export PATH=$(PKG_LIB_DIR)/bin:$$PATH\n'\
+"exec $${BASE_BIN}" '"$$@"'
 
 %:
 	dh $@
@@ -11,15 +18,9 @@ build:
 	make all razip
 
 override_dh_auto_install:
-	mkdir -p ${DEB_DIR}/usr/lib/${PKG_NAME}/bin
-	mkdir -p ${DEB_DIR}/usr/bin
-	for filename in 'samtools-hybrid' 'razip'; do \
-		install -m755 $${filename} ${DEB_DIR}/usr/lib/${PKG_NAME}/bin/$${filename}; \
-		echo "export PATH=/usr/lib/${PKG_NAME}/bin/:\$$PATH; exec $$filename" >  ${DEB_DIR}/usr/bin/$${filename}${VER}; \
-		done
-	for filename in `find misc/ -executable -type f`; do \
-		file=`basename $${filename}`;   \
-		install -m 755 $${filename} ${DEB_DIR}/usr/lib/${PKG_NAME}/bin/$${file}; \
-		echo "export PATH=/usr/lib/${PKG_NAME}/bin/:\$$PATH; exec $$file" > ${DEB_DIR}/usr/bin/$${file}${VER}; \
+	mkdir -p $(DEB_DIR)/usr/bin $(DEB_DIR)$(PKG_LIB_DIR)/bin
+	for BIN in $(BIN_LIST); do \
+		BASE_BIN=$$(basename $${BIN});\
+		install -m 755 $${BIN} $(DEB_DIR)$(PKG_LIB_DIR)/bin/$${BASE_BIN};\
+		echo $(BIN_WRAPPER) | sed 's/^ *//' > $(DEB_DIR)/usr/bin/$${BASE_BIN}$(VER);\
 	done
-
